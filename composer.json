@@ -1,0 +1,26 @@
+{
+    "name": "M6Web/tornado-workshop",
+    "description": "A Tornado workshop about asynchronous programing and generators.",
+    "type": "project",
+    "authors": [
+        {
+            "name": "Benoit Viguier",
+            "email": "benoit.viguier@m6.fr"
+        }
+    ],
+    "require": {
+        "php": "^7.0",
+        "ext-curl": "*",
+        "amphp/amp": "^2.0",
+        "guzzlehttp/guzzle": "^6.3",
+        "m6web/tornado": "^0.1.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Workshop\\Async\\": "src/"
+        }
+    },
+    "config": {
+        "bin-dir": "bin"
+    }
+}

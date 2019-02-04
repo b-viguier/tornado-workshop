@@ -11,21 +11,45 @@ use GuzzleHttp\Psr7\Request;
  */
 function getRequest(string $endpoint): Request
 {
-    return new Request('GET', "https://b-viguier.github.io/Afup-Workshop-Async/api/$endpoint");
+    return new Request('GET', "https://b-viguier.github.io/Afup-Workshop-Async/api$endpoint");
 }
 
 // Tornado Initialization
 $eventLoop = new Tornado\Adapter\Amp\EventLoop();
 $httpClient = new Tornado\Adapter\Guzzle\HttpClient($eventLoop, new Tornado\Adapter\Guzzle\CurlMultiClientWrapper());
-
+$monitoredHttpClient = new \Workshop\Async\MonitoredHttpClient($eventLoop, $httpClient);
+$screen = new \Workshop\Async\AsyncScreen($eventLoop, $monitoredHttpClient);
 
 echo "Start!\n";
 
-$promise = $httpClient->sendRequest(getRequest('text.json'));
-/** @var \GuzzleHttp\Psr7\Response $response */
-$response = $eventLoop->wait($promise);
 
-$data = json_decode((string) $response->getBody(), JSON_OBJECT_AS_ARRAY);
-$nbSentences = count($data['sentences']);
+$screen->display();
+$nbWords = $eventLoop->wait(
+    $eventLoop->async(
+        countWords($monitoredHttpClient, $eventLoop)
+    )
+);
 
-echo "There are $nbSentences sentences in the mysterious text…\n";
+
+echo "\nThere are $nbWords words in the mysterious text…\n";
+
+
+function countWords(Tornado\HttpClient $httpClient, Tornado\EventLoop $eventLoop): \Generator
+{
+    $request = getRequest('/text.json');
+    $response = yield $httpClient->sendRequest($request);
+
+    $data = json_decode((string) $response->getBody(), JSON_OBJECT_AS_ARRAY);
+
+    $wordsCount = yield $eventLoop->promiseForeach(
+        $data['sentences'],
+        function ($sentence) use ($httpClient) {
+            $response = yield $httpClient->sendRequest(getRequest($sentence));
+            $data = json_decode((string) $response->getBody(), JSON_OBJECT_AS_ARRAY);
+
+            return count($data['words']);
+        }
+    );
+
+    return array_sum($wordsCount);
+}

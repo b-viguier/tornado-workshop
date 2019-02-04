@@ -8,9 +8,10 @@ use M6Web\Tornado\Promise;
 class AsyncScreen
 {
 
-    public function __construct(EventLoop $eventLoop)
+    public function __construct(EventLoop $eventLoop, MonitoredHttpClient $monitoredHttpClient)
     {
         $this->eventLoop = $eventLoop;
+        $this->monitoredHttpClient = $monitoredHttpClient;
     }
 
     public function display(): Promise
@@ -23,6 +24,9 @@ class AsyncScreen
     /** @var EventLoop */
     private $eventLoop;
 
+    /** @var MonitoredHttpClient  */
+    private $monitoredHttpClient;
+
     /** @var int */
     private $startTime = 0;
 
@@ -32,8 +36,9 @@ class AsyncScreen
             yield $this->eventLoop->idle();
 
             $elapsedTime = round(microtime(true) - $this->startTime, 1);
+            $concurrency = $this->monitoredHttpClient->getConcurrency();
 
-            echo "Elapsed: $elapsedTime\t\r";
+            echo "Elapsed: $elapsedTime\tConcurrency: $concurrency\r";
         }
     }
 }

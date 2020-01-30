@@ -21,6 +21,11 @@ class AsyncScreen
         return $this->eventLoop->async($this->loop());
     }
 
+    public function __destruct()
+    {
+        $this->isAlive = false;
+    }
+
     /** @var EventLoop */
     private $eventLoop;
 
@@ -30,9 +35,11 @@ class AsyncScreen
     /** @var int */
     private $startTime = 0;
 
+    private $isAlive = true;
+
     private function loop(): \Generator
     {
-        while (true) {
+        while ($this->isAlive) {
             yield $this->eventLoop->idle();
 
             $elapsedTime = number_format(microtime(true) - $this->startTime, 1);

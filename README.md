@@ -45,9 +45,14 @@ that's why we will use asynchronous request, to get the result in about 20 secon
 
 
 #### Steps
-* Number of sentences
+
+##### Already coded
 * Number of words
-* Statistics
-* Limiting requests
-* Retrieving all the text
-* … 
+* Requests statistics
+
+##### Your turn
+* Use TokenBag to limit requests + monitoring
+* Retrieve all the text
+* Display ordered sentences as soon as ready
+* Implement a (in-memory) Cache decorator for the HttpClient
+* ... 

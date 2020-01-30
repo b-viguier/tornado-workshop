@@ -8,10 +8,10 @@ use M6Web\Tornado\Promise;
 class AsyncScreen
 {
 
-    public function __construct(EventLoop $eventLoop, MonitoredHttpClient $monitoredHttpClient)
+    public function __construct(EventLoop $eventLoop, Measurable ...$measurables)
     {
         $this->eventLoop = $eventLoop;
-        $this->monitoredHttpClient = $monitoredHttpClient;
+        $this->measurables = $measurables;
     }
 
     public function display(): Promise
@@ -24,8 +24,8 @@ class AsyncScreen
     /** @var EventLoop */
     private $eventLoop;
 
-    /** @var MonitoredHttpClient  */
-    private $monitoredHttpClient;
+    /** @var array<Measurable>  */
+    private $measurables;
 
     /** @var int */
     private $startTime = 0;
@@ -35,10 +35,15 @@ class AsyncScreen
         while (true) {
             yield $this->eventLoop->idle();
 
-            $elapsedTime = round(microtime(true) - $this->startTime, 1);
-            $concurrency = $this->monitoredHttpClient->getConcurrency();
+            $elapsedTime = number_format(microtime(true) - $this->startTime, 1);
 
-            echo "Elapsed: $elapsedTime\tConcurrency: $concurrency\r";
+            echo "Time: $elapsedTime\t";
+            foreach ($this->measurables as $measurable) {
+                foreach ($measurable->getMetrics() as $name => $value) {
+                    echo "$name: $value\t";
+                }
+            }
+            echo "\r";
         }
     }
 }

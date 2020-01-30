@@ -7,7 +7,7 @@ use M6Web\Tornado\HttpClient;
 use M6Web\Tornado\Promise;
 use Psr\Http\Message\RequestInterface;
 
-class MonitoredHttpClient implements HttpClient
+class MonitoredHttpClient implements HttpClient, Measurable
 {
     public function __construct(EventLoop $eventLoop, HttpClient $httpClient)
     {
@@ -20,9 +20,11 @@ class MonitoredHttpClient implements HttpClient
         return $this->eventLoop->async($this->sendMonitoredRequest($request));
     }
 
-    public function getConcurrency(): int
+    public function getMetrics(): array
     {
-        return $this->concurrency;
+        return [
+            'conc' => str_pad($this->concurrency, 4, '0', STR_PAD_LEFT),
+        ];
     }
 
     /** @var EventLoop */

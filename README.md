@@ -17,7 +17,7 @@ And of course: patience, perseverance and good mood 🙂.
 
 First, clone this repository, and go in corresponding directory.
 ```bash
-git clone git@github.m6web.fr:b-viguier/tornado-workshop.git
+git clone git@github.com:b-viguier/tornado-workshop.git
 cd tornado-workshop
 ```
 

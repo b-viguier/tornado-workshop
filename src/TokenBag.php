@@ -3,10 +3,12 @@
 namespace Workshop\Async;
 
 use M6Web\Tornado\Deferred;
+use M6Web\Tornado\HttpClient;
 use M6Web\Tornado\Promise;
 use M6Web\Tornado\EventLoop;
+use Psr\Http\Message\RequestInterface;
 
-class TokenBag
+class TokenBag implements HttpClient
 {
     /** @var EventLoop */
     private $eventLoop;
@@ -16,11 +18,16 @@ class TokenBag
 
     /** @var Deferred[] */
     private $deferredList = [];
+    /**
+     * @var HttpClient
+     */
+    private $httpClient;
 
-    public function __construct(EventLoop $eventLoop, int $nbTokens)
+    public function __construct(EventLoop $eventLoop, int $nbTokens, HttpClient $httpClient)
     {
         $this->eventLoop = $eventLoop;
         $this->nbTokens = $nbTokens;
+        $this->httpClient = $httpClient;
     }
 
     public function acquireToken(): Promise
@@ -46,5 +53,23 @@ class TokenBag
             --$this->nbTokens;
             $deferred->resolve(true);
         }
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function sendRequest(RequestInterface $request): Promise
+    {
+        return
+            $this->eventLoop->async((function($request) {
+                yield $this->acquireToken();
+                try {
+                    return yield $this->httpClient->sendRequest($request);
+                } finally {
+                    $this->releaseToken();
+                }
+            })($request))
+        ;
+
     }
 }

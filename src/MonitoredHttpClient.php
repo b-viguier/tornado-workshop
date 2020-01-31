@@ -28,10 +28,10 @@ class MonitoredHttpClient implements HttpClient, Measurable
     }
 
     /** @var EventLoop */
-    private $eventLoop;
+    protected $eventLoop;
 
     /** @var HttpClient */
-    private $httpClient;
+    protected $httpClient;
 
     /** @var int */
     private $concurrency = 0;

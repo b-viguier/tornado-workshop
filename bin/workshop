@@ -16,22 +16,30 @@ function getRequest(string $endpoint): Request
 
 // Tornado Initialization
 $eventLoop = new Tornado\Adapter\Amp\EventLoop();
+//$eventLoop = new Tornado\Adapter\ReactPhp\EventLoop(new React\EventLoop\StreamSelectLoop());
 $httpClient = new Tornado\Adapter\Guzzle\HttpClient($eventLoop, new Tornado\Adapter\Guzzle\CurlMultiClientWrapper());
 $monitoredHttpClient = new \Workshop\Async\MonitoredHttpClient($eventLoop, $httpClient);
-$screen = new \Workshop\Async\AsyncScreen($eventLoop, $monitoredHttpClient);
+$cachedMonitoredHttpClient = new \Workshop\Async\CachedMonitoredHttpClient($monitoredHttpClient);
+$screen = new \Workshop\Async\AsyncScreen($eventLoop, $monitoredHttpClient, $cachedMonitoredHttpClient);
+$tokenBag = new \Workshop\Async\TokenBag($eventLoop, 100, $cachedMonitoredHttpClient);
 
 echo "Start!\n";
 
 
 $screen->display();
 $nbWords = $eventLoop->wait(
+//    $eventLoop->async(
+//        returnWords($monitoredHttpClient, $eventLoop)
+//    )
+
     $eventLoop->async(
-        countWords($monitoredHttpClient, $eventLoop)
+        returnWords($tokenBag, $eventLoop)
     )
+
 );
+echo $nbWords;
 
-
-echo "\nThere are $nbWords words in the mysterious text…\n";
+//echo "\nThere are $nbWords words in the mysterious text…\n";
 
 
 function countWords(Tornado\HttpClient $httpClient, Tornado\EventLoop $eventLoop): \Generator
@@ -52,4 +60,39 @@ function countWords(Tornado\HttpClient $httpClient, Tornado\EventLoop $eventLoop
     );
 
     return array_sum($wordsCount);
+}
+
+function returnWords(Tornado\HttpClient $httpClient, Tornado\EventLoop $eventLoop): \Generator
+{
+    $request = getRequest('/text.json');
+    $response = yield $httpClient->sendRequest($request);
+
+    $data = json_decode((string) $response->getBody(), JSON_OBJECT_AS_ARRAY);
+
+    return implode("\n\r",  yield $eventLoop->promiseForeach(
+        $data['sentences'],
+        function ($sentence) use ($httpClient, $eventLoop) {
+            $response = yield $httpClient->sendRequest(getRequest($sentence));
+            $data = json_decode((string) $response->getBody(), JSON_OBJECT_AS_ARRAY);
+
+            return implode(" ", yield $eventLoop->promiseForeach(
+                $data['words'],
+                function ($word) use ($httpClient, $eventLoop) {
+                    $response = yield $httpClient->sendRequest(getRequest($word));
+                    $data = json_decode((string) $response->getBody(), JSON_OBJECT_AS_ARRAY);
+
+                    return implode("", yield $eventLoop->promiseForeach(
+                        $data['letters'],
+                        function ($letter) use ($httpClient) {
+                            $response = yield $httpClient->sendRequest(getRequest($letter));
+                            $data = json_decode((string) $response->getBody(), JSON_OBJECT_AS_ARRAY);
+
+                            return $data['value'];
+                        }
+                    ));
+                }
+            ));
+        }
+    ));
+
 }
